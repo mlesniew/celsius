@@ -4,3 +4,6 @@
 [submodule "lib/OneWire"]
 	path = lib/OneWire
 	url = https://github.com/PaulStoffregen/OneWire.git
+[submodule "lib/printf"]
+	path = lib/printf
+	url = https://github.com/mpaland/printf.git
