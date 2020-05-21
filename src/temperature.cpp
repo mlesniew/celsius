@@ -36,8 +36,8 @@ public:
 
             const bool supported = sensors.validFamily(address);
 
-            printf("Device at index %i has address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x and %s a supported sensor.\n",
-                    pin,
+            printf("Device at index %i on pin %i has address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x and %s a supported sensor.\n",
+                    i, pin,
                     address[0], address[1], address[2], address[3], address[4], address[5], address[6], address[7],
                     supported ? "is" : "is not");
 
@@ -99,7 +99,7 @@ protected:
     DeviceAddress address;
 };
 
-Sensor sensor[] = {2, 3};
+Sensor sensor[] = {2, 3, 4, 5, 6, 7, 8, 9};
 const unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 
 void setup(void) {
