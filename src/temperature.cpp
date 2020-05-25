@@ -24,15 +24,13 @@ void setup(void) {
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, ip);
   server.begin();
-  Serial.print("server is at ");
-  Serial.println(Ethernet.localIP());
 }
 
 void loop() {
   // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
-    Serial.println("new client");
+    Serial.println(F("Got client"));
     // an http request ends with a blank line
     boolean currentLineIsBlank = true;
     while (client.connected()) {
@@ -44,25 +42,21 @@ void loop() {
         // so you can send a reply
         if (c == '\n' && currentLineIsBlank) {
           // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          // add a meta refresh tag, so the browser pulls again every 5 seconds:
-          client.println("<meta http-equiv=\"refresh\" content=\"5\">");
-          // output the value of each analog input pin
-
+          client.print(F(
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: text/html\r\n"
+          "\r\n"
+          "<!DOCTYPE HTML>\r\n"
+          "<html><meta http-equiv=\"refresh\" content=\"5\">"));
           for (unsigned int i = 0; i < sensor_count; ++i) {
               const double t = sensor[i].read();
-              client.print("Temperature ");
+              client.print(F("Temperature "));
               client.print(i);
-              client.print(" is ");
+              client.print(F(" is "));
               client.print(t);
-              client.println("<br />");
+              client.print(F("<br />"));
           }
-          client.println("</html>");
+          client.print(F("</html>"));
           break;
         }
         if (c == '\n') {
@@ -79,6 +73,5 @@ void loop() {
     delay(1);
     // close the connection:
     client.stop();
-    Serial.println("client disonnected");
   }
 }

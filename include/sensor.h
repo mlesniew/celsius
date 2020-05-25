@@ -6,20 +6,18 @@
 
 class Sensor {
 public:
-    Sensor(unsigned int pin);
+    Sensor(uint8_t pin);
 
     bool connect();
     void begin();
     float read();
 
-    const unsigned int pin;
+    const uint8_t pin;
 
 protected:
     OneWire one_wire;
     DallasTemperature sensors;
     bool connected;
-    DeviceAddress address;
 };
-
 
 #endif
