@@ -1,7 +1,9 @@
 #include "sensor.h"
-#include "serial_printf.h"
 
 #define DS18B20_RESOLUTION 9
+
+// not enough memory for printing this way
+#define printf(...)
 
 Sensor::Sensor(unsigned int pin) : pin(pin), one_wire(pin), sensors(&one_wire), connected(false) {}
 
