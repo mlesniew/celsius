@@ -9,8 +9,9 @@ const unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 
 byte mac[] = { 0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed };
 
-IPAddress ip(192, 168, 1, 177);
 EthernetServer server(80);
+
+void (*reset)(void) = 0;
 
 void setup(void) {
   Serial.begin(9600);
@@ -18,8 +19,16 @@ void setup(void) {
   for (unsigned int i = 0; i < sensor_count; ++i)
       sensor[i].begin();
 
-  // start the Ethernet connection and the server:
-  Ethernet.begin(mac, ip);
+  Serial.println(F("Setting up IP with DHCP..."));
+  if (Ethernet.begin(mac) == 0) {
+      Serial.println(F("DHCP failed, reset in 10 seconds..."));
+      delay(10 * 1000);
+      reset();
+  }
+
+  Serial.print(F("IP address: "));
+  Serial.println(Ethernet.localIP());
+
   server.begin();
 }
 
@@ -122,4 +131,34 @@ reply:
 
 void loop() {
     handle_http();
+
+    switch (Ethernet.maintain()) {
+        case 1:
+            //renewed fail
+            Serial.println(F("Error: renewed fail"));
+            reset();
+            break;
+
+        case 2:
+            //renewed success
+            Serial.print(F("My IP address: "));
+            Serial.println(Ethernet.localIP());
+            break;
+
+        case 3:
+            //rebind fail
+            Serial.println(F("Error: rebind fail"));
+            reset();
+            break;
+
+        case 4:
+            //rebind success
+            Serial.print(F("My IP address: "));
+            Serial.println(Ethernet.localIP());
+            break;
+
+        default:
+            //nothing happened
+            break;
+    }
 }
