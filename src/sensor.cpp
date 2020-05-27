@@ -67,5 +67,9 @@ float Sensor::read() {
     }
 
 out:
+    if (!connected) {
+        // this hack sets ret to NaN
+        *((unsigned long *)(&ret)) = 0xffffffff;
+    }
     return ret;
 }
