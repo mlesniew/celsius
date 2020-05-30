@@ -11,6 +11,7 @@ public:
     bool connect();
     void begin();
     float read();
+    bool reconnect_if_needed();
 
     const uint8_t pin;
 

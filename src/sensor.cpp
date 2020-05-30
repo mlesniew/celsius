@@ -9,9 +9,10 @@ bool Sensor::connect()
     // this searches for new devices
     sensors.begin();
 
-    Serial.print(F("P"));
+    Serial.print(F("Pin "));
     Serial.print(pin);
-    Serial.print(sensors.isParasitePowerMode() ? F("/P:") : F("/N:"));
+    Serial.print(sensors.isParasitePowerMode() ? F(" - parasite power - ")
+                                               : F(" - normal power   - "));
 
     DeviceAddress address;
 
@@ -26,20 +27,26 @@ bool Sensor::connect()
     }
 
     if (!sensors.validFamily(address)) {
-        Serial.println(F(" unsupported"));
+        Serial.println(F(" unsupported device"));
         return false;
     }
 
     if (sensors.getResolution(address) != DS18B20_RESOLUTION) {
-        Serial.print(F(" config"));
+        Serial.print(F(" configuring"));
         if (!sensors.setResolution(address, DS18B20_RESOLUTION)) {
-            Serial.println(F(" error"));
+            Serial.println(F(" error "));
             return false;
         }
     }
 
     Serial.println(F(" OK"));
     connected = true;
+    return connected;
+}
+
+bool Sensor::reconnect_if_needed() {
+    if (!connected)
+        connected = connect();
     return connected;
 }
 
@@ -51,7 +58,7 @@ void Sensor::begin() {
 float Sensor::read() {
     float ret = DEVICE_DISCONNECTED_C;
 
-    if (!connected && !connect()) {
+    if (!connected) {
         goto out;
     }
 

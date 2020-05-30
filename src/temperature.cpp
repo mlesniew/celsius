@@ -2,37 +2,54 @@
 
 #include "sensor.h"
 
-#define HOSTNAME "Ondogye"
+#define SERVER_NAME "Ondogye"
+#define SENSOR_RECONNECT_INTERVAL 60
+#define BUFFER_MAX 50
+
+void check_link();
+void handle_dhcp();
+void setup_ethernet(const byte mac[]);
 
 Sensor sensor[] = {2, 3, 4, 5, 6, 7, 8, 9};
 const unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 
-byte mac[] = { 0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed };
+const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 
 EthernetServer server(80);
 
-void (*reset)(void) = 0;
+void reconnect_sensors() {
+    static auto last_reconnect = millis();
 
-void setup(void) {
+    if (millis() - last_reconnect < 1000 * SENSOR_RECONNECT_INTERVAL) {
+        return;
+    }
+
+    Serial.println("Reconnecting sensors...");
+
+    for (unsigned int i = 0; i < sensor_count; ++i) {
+        sensor[i].reconnect_if_needed();
+    }
+
+    last_reconnect = millis();
+}
+
+void setup() {
   Serial.begin(9600);
-  Serial.println("Initializing...\n");
+  Serial.println(F(
+       " _____       _\n"
+       "|     |___ _| |___ ___ _ _ ___ \n"
+       "|  |  |   | . | . | . | | | -_|\n"
+       "|_____|_|_|___|___|_  |_  |___|\n"
+       "                  |___|___|\n"
+       "\n"
+       SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
+
   for (unsigned int i = 0; i < sensor_count; ++i)
       sensor[i].begin();
 
-  Serial.println(F("Setting up IP with DHCP..."));
-  if (Ethernet.begin(mac) == 0) {
-      Serial.println(F("DHCP failed, reset in 10 seconds..."));
-      delay(10 * 1000);
-      reset();
-  }
-
-  Serial.print(F("IP address: "));
-  Serial.println(Ethernet.localIP());
-
+  setup_ethernet(mac);
   server.begin();
 }
-
-#define BUFFER_MAX 50
 
 size_t read_until(EthernetClient & client, const char terminator, char * buf = nullptr) {
     size_t pos = 0;
@@ -71,6 +88,12 @@ size_t read_until(EthernetClient & client, const char terminator, char * buf = n
     return pos;
 }
 
+template <typename T>
+void send_data(EthernetClient & client, const T & data) {
+    Serial.print(data);
+    client.print(data);
+}
+
 void handle_http() {
     EthernetClient client = server.available();
     if (!client)
@@ -99,66 +122,40 @@ consume:
         // got another non-empty line, continue
     }
 
-reply:
     // ready to reply
-    client.print(F("HTTP/1.1 "));
-    client.print(code);
-    client.print(code < 300 ? F(" OK") : F(" Error"));
-    client.print(F("\r\n"
-                "Server: " HOSTNAME "\r\n"
+    send_data(client, F("HTTP/1.1 "));
+    send_data(client, code);
+    send_data(client, code < 300 ? F(" OK") : F(" Error"));
+    send_data(client, F("\r\n"
+                "Server: " SERVER_NAME "\r\n"
                 "Content-Type: text/plain\r\n"
                 "\r\n"));
 
     if (code < 300) {
-        client.print(
+        send_data(
+                client,
                 F("# HELP temperature Temperature in degrees Celsius\n"
                   "# TYPE temperature gauge\n"));
         for (unsigned int i = 0; i < sensor_count; ++i) {
             const double t = sensor[i].read();
-            client.print(F("temperature{sensor="));
-            client.print(i);
-            client.print(F("} "));
-            client.print(t);
-            client.print(F("\n"));
+            send_data(client, F("temperature{sensor=\""));
+            send_data(client, i);
+            send_data(client, F("\"} "));
+            send_data(client, t);
+            send_data(client, F("\n"));
         }
     }
 
     // give the web browser time to receive the data
     delay(1);
+
     // close the connection:
     client.stop();
 }
 
 void loop() {
+    reconnect_sensors();
+    check_link();
+    handle_dhcp();
     handle_http();
-
-    switch (Ethernet.maintain()) {
-        case 1:
-            //renewed fail
-            Serial.println(F("Error: renewed fail"));
-            reset();
-            break;
-
-        case 2:
-            //renewed success
-            Serial.print(F("My IP address: "));
-            Serial.println(Ethernet.localIP());
-            break;
-
-        case 3:
-            //rebind fail
-            Serial.println(F("Error: rebind fail"));
-            reset();
-            break;
-
-        case 4:
-            //rebind success
-            Serial.print(F("My IP address: "));
-            Serial.println(Ethernet.localIP());
-            break;
-
-        default:
-            //nothing happened
-            break;
-    }
 }
