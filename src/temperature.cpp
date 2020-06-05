@@ -19,8 +19,11 @@ EthernetServer server(80);
 
 void reconnect_sensors() {
     static auto last_reconnect = millis();
+    const auto now = millis();
 
-    if (millis() - last_reconnect < 1000 * SENSOR_RECONNECT_INTERVAL) {
+    const auto elapsed = (now - last_reconnect) / 1000;
+
+    if (elapsed < SENSOR_RECONNECT_INTERVAL) {
         return;
     }
 
@@ -30,7 +33,7 @@ void reconnect_sensors() {
         sensor[i].reconnect_if_needed();
     }
 
-    last_reconnect = millis();
+    last_reconnect = now;
 }
 
 void setup() {
