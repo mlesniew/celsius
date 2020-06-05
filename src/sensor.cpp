@@ -1,6 +1,6 @@
 #include "sensor.h"
 
-#define DS18B20_RESOLUTION 9
+#define DS18B20_RESOLUTION 12
 
 Sensor::Sensor(uint8_t pin) : pin(pin), one_wire(pin), sensors(&one_wire), connected(false) {}
 
