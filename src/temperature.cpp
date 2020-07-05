@@ -11,6 +11,32 @@ void handle_dhcp();
 void setup_ethernet(const byte mac[]);
 
 Sensor sensor[] = {2, 3, 4, 5, 6, 7, 8, 9};
+
+#if __has_include("sensor_names.h")
+#include "sensor_names.h"
+#else
+#warning "Using generic sensor names, please define custom names in sensor_names.h to override."
+const char sensor_name_1[] PROGMEM = "1";
+const char sensor_name_2[] PROGMEM = "2";
+const char sensor_name_3[] PROGMEM = "3";
+const char sensor_name_4[] PROGMEM = "4";
+const char sensor_name_5[] PROGMEM = "5";
+const char sensor_name_6[] PROGMEM = "6";
+const char sensor_name_7[] PROGMEM = "7";
+const char sensor_name_8[] PROGMEM = "8";
+#endif
+
+const char * const sensor_names[] PROGMEM = {
+    sensor_name_1,
+    sensor_name_2,
+    sensor_name_3,
+    sensor_name_4,
+    sensor_name_5,
+    sensor_name_6,
+    sensor_name_7,
+    sensor_name_8,
+};
+
 const unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 
 const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
@@ -131,7 +157,7 @@ consume:
     send_data(client, code < 300 ? F(" OK") : F(" Error"));
     send_data(client, F("\r\n"
                 "Server: " SERVER_NAME "\r\n"
-                "Content-Type: text/plain\r\n"
+                "Content-Type: text/plain; charset=utf-8\r\n"
                 "\r\n"));
 
     if (code < 300) {
@@ -142,7 +168,9 @@ consume:
         for (unsigned int i = 0; i < sensor_count; ++i) {
             const double t = sensor[i].read();
             send_data(client, F("temperature{sensor=\""));
-            send_data(client, i);
+            char buffer[32];
+            strncpy_P(buffer, (const char*) pgm_read_dword(&(sensor_names[i])), 32);
+            send_data(client, buffer);
             send_data(client, F("\"} "));
             send_data(client, t);
             send_data(client, F("\n"));
