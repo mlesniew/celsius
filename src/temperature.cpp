@@ -165,12 +165,21 @@ consume:
                 client,
                 F("# HELP temperature Temperature in degrees Celsius\n"
                   "# TYPE temperature gauge\n"));
+
+        for (unsigned int i = 0; i < sensor_count; ++i) {
+            sensor[i].request_temperature();
+        }
+
+        delay(DS18B20_CONVERSION_DELAY_MS);
+
         for (unsigned int i = 0; i < sensor_count; ++i) {
             const double t = sensor[i].read();
             send_data(client, F("temperature{sensor=\""));
-            char buffer[32];
-            strncpy_P(buffer, (const char*) pgm_read_dword(&(sensor_names[i])), 32);
-            send_data(client, buffer);
+            {
+                char buffer[16];
+                strncpy_P(buffer, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
+                send_data(client, buffer);
+            }
             send_data(client, F("\"} "));
             send_data(client, t);
             send_data(client, F("\n"));

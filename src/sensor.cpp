@@ -1,7 +1,5 @@
 #include "sensor.h"
 
-#define DS18B20_RESOLUTION 12
-
 Sensor::Sensor(uint8_t pin) : pin(pin), one_wire(pin), sensors(&one_wire), connected(false) {}
 
 bool Sensor::connect()
@@ -39,6 +37,9 @@ bool Sensor::connect()
         }
     }
 
+    // use asynchronous requests
+    sensors.setWaitForConversion(false);
+
     Serial.println(F(" OK"));
     connected = true;
     return connected;
@@ -55,15 +56,21 @@ void Sensor::begin() {
     connect();
 }
 
-float Sensor::read() {
-    float ret = DEVICE_DISCONNECTED_C;
-
+void Sensor::request_temperature() {
     if (!connected) {
-        goto out;
+        return;
     }
 
     if (!sensors.requestTemperaturesByIndex(0)) {
         connected = false;
+        return;
+    }
+}
+
+float Sensor::read() {
+    float ret = DEVICE_DISCONNECTED_C;
+
+    if (!connected) {
         goto out;
     }
 
