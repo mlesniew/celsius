@@ -2,6 +2,8 @@
 
 #include "sensor.h"
 
+#define REBOOT_TIMEOUT (15 * 60 * 1000l)
+
 #define SERVER_NAME "Ondogye"
 #define SENSOR_RECONNECT_INTERVAL 60
 #define BUFFER_SIZE 30
@@ -124,10 +126,10 @@ void send_data(EthernetClient & client, const T & data) {
     client.print(data);
 }
 
-void handle_http() {
+bool handle_http() {
     EthernetClient client = server.available();
     if (!client)
-        return;
+        return false;
 
     uint16_t code = 200;
 
@@ -191,11 +193,25 @@ consume:
 
     // close the connection:
     client.stop();
+
+    return true;
 }
 
 void loop() {
+#ifdef REBOOT_TIMEOUT
+    static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
+    static unsigned long last_http_client = millis();
+#endif
     reconnect_sensors();
     check_link();
     handle_dhcp();
-    handle_http();
+    bool http_client_handled = handle_http();
+#ifdef REBOOT_TIMEOUT
+    if (http_client_handled) {
+        last_http_client = millis();
+    } else if (millis() - last_http_client > reboot_timeout) {
+        static void (*reset)(void) = 0;
+        reset();
+    }
+#endif
 }
