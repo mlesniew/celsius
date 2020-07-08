@@ -4,7 +4,8 @@
 
 #define SERVER_NAME "Ondogye"
 #define SENSOR_RECONNECT_INTERVAL 60
-#define BUFFER_MAX 50
+#define BUFFER_SIZE 30
+char buffer[BUFFER_SIZE];
 
 void check_link();
 void handle_dhcp();
@@ -53,7 +54,7 @@ void reconnect_sensors() {
         return;
     }
 
-    Serial.println("Reconnecting sensors...");
+    Serial.println(F("Reconnecting sensors..."));
 
     for (unsigned int i = 0; i < sensor_count; ++i) {
         sensor[i].reconnect_if_needed();
@@ -86,7 +87,7 @@ size_t read_until(EthernetClient & client, const char terminator, char * buf = n
     if (buf)
         buf[0] = 0;
 
-    while (client.connected() && (pos < BUFFER_MAX - 1)) {
+    while (client.connected() && (pos < BUFFER_SIZE - 1)) {
         if (!client.available()) {
             // wait for more data
             continue;
@@ -106,7 +107,7 @@ size_t read_until(EthernetClient & client, const char terminator, char * buf = n
             break;
         }
 
-        if (buf && (pos < (BUFFER_MAX - 1))) {
+        if (buf && (pos < (BUFFER_SIZE - 1))) {
             buf[pos] = c;
             buf[pos + 1] = 0;
         }
@@ -129,7 +130,6 @@ void handle_http() {
         return;
 
     uint16_t code = 200;
-    char buffer[BUFFER_MAX];
 
     // read the HTTP verb
     read_until(client, ' ', buffer);
