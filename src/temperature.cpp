@@ -40,7 +40,7 @@ const char * const sensor_names[] PROGMEM = {
     sensor_name_8,
 };
 
-const unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
+constexpr unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 
 const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 
@@ -83,13 +83,12 @@ void setup() {
   server.begin();
 }
 
-size_t read_until(EthernetClient & client, const char terminator, char * buf = nullptr) {
+size_t read_until(EthernetClient & client, const char terminator) {
     size_t pos = 0;
 
-    if (buf)
-        buf[0] = 0;
+    memset(buffer, 0, BUFFER_SIZE);
 
-    while (client.connected() && (pos < BUFFER_SIZE - 1)) {
+    while (client.connected()) {
         if (!client.available()) {
             // wait for more data
             continue;
@@ -109,9 +108,8 @@ size_t read_until(EthernetClient & client, const char terminator, char * buf = n
             break;
         }
 
-        if (buf && (pos < (BUFFER_SIZE - 1))) {
-            buf[pos] = c;
-            buf[pos + 1] = 0;
+        if (pos < BUFFER_SIZE) {
+            buffer[pos] = c;
         }
 
         ++pos;
@@ -134,15 +132,15 @@ bool handle_http() {
     uint16_t code = 200;
 
     // read the HTTP verb
-    read_until(client, ' ', buffer);
-    if (strcmp_P(buffer, (const char*) F("GET")) != 0) {
+    read_until(client, ' ');
+    if (strncmp_P(buffer, (const char*) F("GET"), BUFFER_SIZE) != 0) {
         code = 400;
         goto consume;
     }
 
     // read uri
-    read_until(client, ' ', buffer);
-    if (strcmp_P(buffer, (const char*) F("/metrics")) != 0) {
+    read_until(client, ' ');
+    if (strncmp_P(buffer, (const char*) F("/metrics"), BUFFER_SIZE) != 0) {
         code = 404;
         // goto consume;
     }
@@ -178,9 +176,9 @@ consume:
             const double t = sensor[i].read();
             send_data(client, F("temperature{sensor=\""));
             {
-                char buffer[16];
-                strncpy_P(buffer, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
-                send_data(client, buffer);
+                char name[16];
+                strncpy_P(name, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
+                send_data(client, name);
             }
             send_data(client, F("\"} "));
             send_data(client, t);
