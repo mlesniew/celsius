@@ -89,12 +89,14 @@ size_t read_until(EthernetClient & client, const char terminator) {
     memset(buffer, 0, BUFFER_SIZE);
 
     while (client.connected()) {
-        if (!client.available()) {
-            // wait for more data
+        int data = client.read();
+
+        if (data < 0) {
+            // no more data available
             continue;
         }
 
-        char c = client.read();
+        char c = (char) data;
 
         if (c == '\r') {
             // always ignore
@@ -185,6 +187,9 @@ consume:
             send_data(client, F("\n"));
         }
     }
+
+    // wait for all data to get sent
+    client.flush();
 
     // give the web browser time to receive the data
     delay(1);
