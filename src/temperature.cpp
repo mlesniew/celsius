@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <UIPEthernet.h>
 
 #include "sensor.h"
@@ -7,6 +8,9 @@
 #define SERVER_NAME "Ondogye"
 #define SENSOR_RECONNECT_INTERVAL 60
 #define BUFFER_SIZE 30
+#define PIR_PIN A5
+#define PIR_HOLD_TIME (60l * 1000)
+
 char buffer[BUFFER_SIZE];
 
 void check_link();
@@ -14,6 +18,8 @@ void handle_dhcp();
 void setup_ethernet(const byte mac[]);
 
 Sensor sensor[] = {2, 3, 4, 5, 6, 7, 8, 9};
+
+bool pir_status = false;
 
 #if __has_include("sensor_names.h")
 #include "sensor_names.h"
@@ -75,6 +81,8 @@ void setup() {
        "                  |___|___|\n"
        "\n"
        SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
+
+  pinMode(PIR_PIN, INPUT_PULLUP);
 
   for (unsigned int i = 0; i < sensor_count; ++i)
       sensor[i].begin();
@@ -163,10 +171,22 @@ consume:
                 "\r\n"));
 
     if (code < 300) {
+        {
+            send_data(
+                    client,
+                    F("# HELP presence PIR presence sensor activated\n"
+                      "# TYPE presence gauge\n"
+                      "presence "));
+            send_data(client, pir_status);
+            send_data(client, F("\n"));
+        }
+
+        // temperature sensors
         send_data(
                 client,
                 F("# HELP temperature Temperature in degrees Celsius\n"
-                  "# TYPE temperature gauge\n"));
+                  "# TYPE temperature gauge\n")
+                );
 
         for (unsigned int i = 0; i < sensor_count; ++i) {
             sensor[i].request_temperature();
@@ -205,10 +225,23 @@ void loop() {
     static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
     static unsigned long last_http_client = millis();
 #endif
+
+    {
+        static unsigned long last_pir_active_time = 0;
+        const auto pir = digitalRead(PIR_PIN) == LOW ? 1 : 0;
+        if (pir) {
+            pir_status = true;
+            last_pir_active_time = millis();
+        } else if (pir_status && (millis() - last_pir_active_time > PIR_HOLD_TIME)) {
+            pir_status = false;
+        }
+    }
+
     reconnect_sensors();
     check_link();
     handle_dhcp();
     bool http_client_handled = handle_http();
+
 #ifdef REBOOT_TIMEOUT
     if (http_client_handled) {
         last_http_client = millis();
