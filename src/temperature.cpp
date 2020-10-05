@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <avr/wdt.h>
 #include <UIPEthernet.h>
 
 #include "sensor.h"
@@ -89,6 +90,8 @@ void setup() {
 
   setup_ethernet(mac);
   server.begin();
+
+  wdt_enable(WDTO_8S);
 }
 
 size_t read_until(EthernetClient & client, const char terminator) {
@@ -221,6 +224,8 @@ consume:
 }
 
 void loop() {
+    wdt_reset();
+
 #ifdef REBOOT_TIMEOUT
     static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
     static unsigned long last_http_client = millis();
