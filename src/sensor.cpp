@@ -2,8 +2,7 @@
 
 Sensor::Sensor(uint8_t pin) : pin(pin), one_wire(pin), sensors(&one_wire), connected(false) {}
 
-bool Sensor::connect()
-{
+bool Sensor::connect() {
     // this searches for new devices
     sensors.begin();
 

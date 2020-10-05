@@ -90,7 +90,6 @@ void setup() {
 
   setup_ethernet(mac);
   server.begin();
-
   wdt_enable(WDTO_8S);
 }
 
@@ -226,11 +225,6 @@ consume:
 void loop() {
     wdt_reset();
 
-#ifdef REBOOT_TIMEOUT
-    static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
-    static unsigned long last_http_client = millis();
-#endif
-
     {
         static unsigned long last_pir_active_time = 0;
         const auto pir = digitalRead(PIR_PIN) == LOW ? 1 : 0;
@@ -248,11 +242,17 @@ void loop() {
     bool http_client_handled = handle_http();
 
 #ifdef REBOOT_TIMEOUT
-    if (http_client_handled) {
-        last_http_client = millis();
-    } else if (millis() - last_http_client > reboot_timeout) {
-        static void (*reset)(void) = 0;
-        reset();
+    #warning The Arduino will reset automatically if no requests are received for REBOOT_TIMEOUT milliseconds
+    {
+        static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
+        static unsigned long last_http_client = millis();
+
+        if (http_client_handled) {
+            last_http_client = millis();
+        } else if (millis() - last_http_client > reboot_timeout) {
+            // wait for the Watchdog to reset the board
+            while (1);
+        }
     }
 #endif
 }
