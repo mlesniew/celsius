@@ -1,16 +1,11 @@
 #include "sensor.h"
 
-Sensor::Sensor(uint8_t pin) : pin(pin), one_wire(pin), sensors(&one_wire), connected(false) {}
+Sensor::Sensor(uint8_t pin) : one_wire(pin), sensors(&one_wire), connected(false) {}
 
 bool Sensor::connect() {
-    // this searches for new devices
     sensors.begin();
 
-    Serial.print(F("Pin "));
-    Serial.print(pin);
-    Serial.print(sensors.isParasitePowerMode() ? F(" - parasite power - ")
-                                               : F(" - normal power   - "));
-
+    Serial.print(F("Scanning... "));
     DeviceAddress address;
 
     if (!sensors.getDeviceCount() || !sensors.getAddress(address, 0)) {
@@ -40,29 +35,20 @@ bool Sensor::connect() {
     sensors.setWaitForConversion(false);
 
     Serial.println(F(" OK"));
-    connected = true;
-    return connected;
-}
-
-bool Sensor::reconnect_if_needed() {
-    if (!connected)
-        connected = connect();
-    return connected;
-}
-
-void Sensor::begin() {
-    sensors.begin();
-    connect();
+    return true;
 }
 
 void Sensor::request_temperature() {
+    connected = connected || connect();
+
     if (!connected) {
+        // still no device
         return;
     }
 
     if (!sensors.requestTemperaturesByIndex(0)) {
+        // disconnected again!
         connected = false;
-        return;
     }
 }
 

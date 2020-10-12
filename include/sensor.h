@@ -11,15 +11,11 @@ class Sensor {
 public:
     Sensor(uint8_t pin);
 
-    bool connect();
-    void begin();
     void request_temperature();
     float read();
-    bool reconnect_if_needed();
-
-    const uint8_t pin;
 
 protected:
+    bool connect();
     OneWire one_wire;
     DallasTemperature sensors;
     bool connected;

@@ -7,7 +7,6 @@
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
 
 #define SERVER_NAME "Ondogye"
-#define SENSOR_RECONNECT_INTERVAL 60
 #define BUFFER_SIZE 30
 #define PIR_PIN A5
 #define PIR_HOLD_TIME (60l * 1000)
@@ -53,25 +52,6 @@ const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 
 EthernetServer server(80);
 
-void reconnect_sensors() {
-    static auto last_reconnect = millis();
-    const auto now = millis();
-
-    const auto elapsed = (now - last_reconnect) / 1000;
-
-    if (elapsed < SENSOR_RECONNECT_INTERVAL) {
-        return;
-    }
-
-    Serial.println(F("Reconnecting sensors..."));
-
-    for (unsigned int i = 0; i < sensor_count; ++i) {
-        sensor[i].reconnect_if_needed();
-    }
-
-    last_reconnect = now;
-}
-
 void setup() {
   Serial.begin(9600);
   Serial.println(F(
@@ -84,9 +64,6 @@ void setup() {
        SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
 
   pinMode(PIR_PIN, INPUT_PULLUP);
-
-  for (unsigned int i = 0; i < sensor_count; ++i)
-      sensor[i].begin();
 
   setup_ethernet(mac);
   server.begin();
@@ -236,7 +213,6 @@ void loop() {
         }
     }
 
-    reconnect_sensors();
     check_link();
     handle_dhcp();
     bool http_client_handled = handle_http();
