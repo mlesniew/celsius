@@ -1,0 +1,78 @@
+<html>
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- make it a mobile app -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#007bff">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+
+    <title>Ondogye</title>
+
+    <!-- scripts -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+                $.get("measurements.json", function(data) {
+                    $("#spinny").fadeOut();
+
+                    row = $("#row");
+                    row.attr("id", null);
+                    tab = $("#ondbod");
+                    tab.hide();
+
+                    $.each(data["temperature"], function(key, val) {
+                        nr = row.clone();
+
+                        nr.find("#name").text(key);
+                        nr.find("#value").text(val + " °C");
+                        tab.append(nr);
+
+                        $(nr).show();
+                    });
+
+                    nr = row.clone();
+
+                    nr.find("#name").text("presence");
+                    nr.find("#value").text(data["presence"] ? "✔" : "✗");
+
+                    tab.append(nr);
+
+                    $(nr).show();
+
+                    tab.fadeIn();
+                });
+        });
+    </script>
+  </head>
+  <body>
+
+    <nav class="navbar navbar-dark bg-primary mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="https://github.com/mlesniew/ondogye">Ondogye</a>
+            <div class="spinner-border text-light" id="spinny" role="status">
+                  <span class="sr-only"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row" id="ondbod">
+            <div class="col-12 col-sm-6 col-md-4 p-1" id="row" style="display:none">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title fs-2" id="name">Name</h5>
+                        <p class="card-text text-end fs-1" id="value">Value</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+  </body>
+</html>

@@ -2,6 +2,7 @@
 #include <avr/wdt.h>
 #include <UIPEthernet.h>
 
+#include "html.h"
 #include "sensor.h"
 
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
@@ -113,7 +114,95 @@ void send_data(EthernetClient & client, const T & data) {
     client.print(data);
 }
 
+void send_headers(EthernetClient & client, const uint16_t code, const __FlashStringHelper * content_type = nullptr) {
+    send_data(client, F("HTTP/1.1 "));
+    send_data(client, code);
+    send_data(client, code < 300 ? F(" OK") : F(" Error"));
+    send_data(client,
+              F("\r\n"
+                "Server: " SERVER_NAME "\r\n"));
+    if (content_type) {
+        send_data(client, F("Content-Type: "));
+        send_data(client, content_type);
+        send_data(client, F("; charset=utf-8\r\n"));
+    }
+    send_data(client, F("\r\n"));
+}
+
+void serve_html(EthernetClient & client) {
+    send_headers(client, 200, F("text/html"));
+    send_data(client, INDEX_HTML);
+}
+
+template <typename T>
+void serve_measurements(
+        EthernetClient & client,
+        const T & content_type,
+        const T & presence_header,
+        const T & temperature_header,
+        const T & temperature_name_start,
+        const T & temperature_name_end,
+        const T & temperature_separator,
+        const T & temperature_footer) {
+
+    send_headers(client, 200, content_type);
+
+    send_data(client, presence_header);
+    send_data(client, pir_status);
+
+    // temperature sensors
+    send_data(client, temperature_header);
+
+    for (unsigned int i = 0; i < sensor_count; ++i) {
+        sensor[i].request_temperature();
+    }
+
+    delay(DS18B20_CONVERSION_DELAY_MS);
+
+    for (unsigned int i = 0; i < sensor_count; ++i) {
+        if (i > 0) {
+            send_data(client, temperature_separator);
+        }
+        const double t = sensor[i].read();
+        send_data(client, temperature_name_start);
+        {
+            char name[16];
+            strncpy_P(name, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
+            send_data(client, name);
+        }
+        send_data(client, temperature_name_end);
+        send_data(client, t);
+    }
+    send_data(client, temperature_footer);
+}
+
+void serve_measurements_prometheus(EthernetClient & client) {
+    serve_measurements(
+        client,
+        F("text/plain"),
+        F("# HELP presence PIR presence sensor activated\n# TYPE presence gauge\npresence "),
+        F("\n# HELP temperature Temperature in degrees Celsius\n# TYPE temperature gauge\n"),
+        F("temperature{sensor=\""),
+        F("\"} "),
+        F("\n"),
+        F("\n"));
+}
+
+void serve_measurements_json(EthernetClient & client) {
+    serve_measurements(
+        client,
+        F("application/json"),
+        F("{\"presence\":"),
+        F(",\"temperature\":{"),
+        F("\""),
+        F("\":"),
+        F(","),
+        F("}}"));
+}
+
 bool handle_http() {
+    enum {reply_index, reply_json, reply_prometheus, reply_error} reply = reply_error;
+
     EthernetClient client = server.available();
     if (!client)
         return false;
@@ -129,9 +218,15 @@ bool handle_http() {
 
     // read uri
     read_until(client, ' ');
-    if (strncmp_P(buffer, (const char*) F("/metrics"), BUFFER_SIZE) != 0) {
+    if (strncmp_P(buffer, (const char*) F("/measurements.json"), BUFFER_SIZE) == 0)
+        reply = reply_json;
+    else if (strncmp_P(buffer, (const char*) F("/metrics"), BUFFER_SIZE) == 0)
+        reply = reply_prometheus;
+    else if (strncmp_P(buffer, (const char*) F("/"), BUFFER_SIZE) == 0)
+        reply = reply_index;
+    else {
         code = 404;
-        // goto consume;
+        reply = reply_error;
     }
 
 consume:
@@ -141,50 +236,18 @@ consume:
     }
 
     // ready to reply
-    send_data(client, F("HTTP/1.1 "));
-    send_data(client, code);
-    send_data(client, code < 300 ? F(" OK") : F(" Error"));
-    send_data(client, F("\r\n"
-                "Server: " SERVER_NAME "\r\n"
-                "Content-Type: text/plain; charset=utf-8\r\n"
-                "\r\n"));
-
-    if (code < 300) {
-        {
-            send_data(
-                    client,
-                    F("# HELP presence PIR presence sensor activated\n"
-                      "# TYPE presence gauge\n"
-                      "presence "));
-            send_data(client, pir_status);
-            send_data(client, F("\n"));
-        }
-
-        // temperature sensors
-        send_data(
-                client,
-                F("# HELP temperature Temperature in degrees Celsius\n"
-                  "# TYPE temperature gauge\n")
-                );
-
-        for (unsigned int i = 0; i < sensor_count; ++i) {
-            sensor[i].request_temperature();
-        }
-
-        delay(DS18B20_CONVERSION_DELAY_MS);
-
-        for (unsigned int i = 0; i < sensor_count; ++i) {
-            const double t = sensor[i].read();
-            send_data(client, F("temperature{sensor=\""));
-            {
-                char name[16];
-                strncpy_P(name, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
-                send_data(client, name);
-            }
-            send_data(client, F("\"} "));
-            send_data(client, t);
-            send_data(client, F("\n"));
-        }
+    switch (reply) {
+        case reply_index:
+            serve_html(client);
+            break;
+        case reply_json:
+            serve_measurements_json(client);
+            break;
+        case reply_prometheus:
+            serve_measurements_prometheus(client);
+            break;
+        default:
+            send_headers(client, code);
     }
 
     // wait for all data to get sent
