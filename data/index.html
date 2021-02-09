@@ -29,7 +29,7 @@
                         nr = row.clone();
 
                         nr.find("#name").text(key);
-                        nr.find("#value").text(val + " °C");
+                        nr.find("#value").text(val.toFixed(2) + " °C");
                         tab.append(nr);
 
                         $(nr).show();
