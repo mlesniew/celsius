@@ -7,7 +7,7 @@
 
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
 
-#define SERVER_NAME "Ondogye"
+#define SERVER_NAME "Celsius"
 #define BUFFER_SIZE 30
 #define PIR_PIN A5
 #define PIR_HOLD_TIME (60l * 1000)
@@ -55,14 +55,7 @@ EthernetServer server(80);
 
 void setup() {
   Serial.begin(9600);
-  Serial.println(F(
-       " _____       _\n"
-       "|     |___ _| |___ ___ _ _ ___ \n"
-       "|  |  |   | . | . | . | | | -_|\n"
-       "|_____|_|_|___|___|_  |_  |___|\n"
-       "                  |___|___|\n"
-       "\n"
-       SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
+  Serial.println(F(SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
 
   pinMode(PIR_PIN, INPUT_PULLUP);
 
