@@ -175,7 +175,7 @@ void serve_measurements_prometheus(EthernetClient & client) {
         F("text/plain"),
         F("# HELP presence PIR presence sensor activated\n# TYPE presence gauge\npresence "),
         F("\n# HELP temperature Temperature in degrees Celsius\n# TYPE temperature gauge\n"),
-        F("temperature{sensor=\""),
+        F("air_temperature{name=\""),
         F("\"} "),
         F("\n"),
         F("\n"));
