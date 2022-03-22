@@ -1,2 +1,4 @@
+.build
 .pio
-sensor_names.h
+src/html.h
+src/sensor_names.h
