@@ -9,8 +9,6 @@
 
 #define SERVER_NAME "Celsius"
 #define BUFFER_SIZE 30
-#define PIR_PIN A5
-#define PIR_HOLD_TIME (60l * 1000)
 
 char buffer[BUFFER_SIZE];
 
@@ -19,8 +17,6 @@ void handle_dhcp();
 void setup_ethernet(const byte mac[]);
 
 Sensor sensor[] = {2, 3, 4, 5, 6, 7, 8, 9};
-
-bool pir_status = false;
 
 #if __has_include("sensor_names.h")
 #include "sensor_names.h"
@@ -56,8 +52,6 @@ EthernetServer server(80);
 void setup() {
   Serial.begin(9600);
   Serial.println(F(SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
-
-  pinMode(PIR_PIN, INPUT_PULLUP);
 
   setup_ethernet(mac);
   server.begin();
@@ -131,7 +125,6 @@ template <typename T>
 void serve_measurements(
         EthernetClient & client,
         const T & content_type,
-        const T & presence_header,
         const T & temperature_header,
         const T & temperature_name_start,
         const T & temperature_name_end,
@@ -139,9 +132,6 @@ void serve_measurements(
         const T & temperature_footer) {
 
     send_headers(client, 200, content_type);
-
-    send_data(client, presence_header);
-    send_data(client, pir_status);
 
     // temperature sensors
     send_data(client, temperature_header);
@@ -173,7 +163,6 @@ void serve_measurements_prometheus(EthernetClient & client) {
     serve_measurements(
         client,
         F("text/plain"),
-        F("# HELP presence PIR presence sensor activated\n# TYPE presence gauge\npresence "),
         F("\n# HELP temperature Temperature in degrees Celsius\n# TYPE temperature gauge\n"),
         F("air_temperature{name=\""),
         F("\"} "),
@@ -185,12 +174,11 @@ void serve_measurements_json(EthernetClient & client) {
     serve_measurements(
         client,
         F("application/json"),
-        F("{\"presence\":"),
-        F(",\"temperature\":{"),
+        F("{"),
         F("\""),
         F("\":"),
         F(","),
-        F("}}"));
+        F("}"));
 }
 
 bool handle_http() {
@@ -211,7 +199,7 @@ bool handle_http() {
 
     // read uri
     read_until(client, ' ');
-    if (strncmp_P(buffer, (const char*) F("/measurements.json"), BUFFER_SIZE) == 0)
+    if (strncmp_P(buffer, (const char*) F("/temperature.json"), BUFFER_SIZE) == 0)
         reply = reply_json;
     else if (strncmp_P(buffer, (const char*) F("/metrics"), BUFFER_SIZE) == 0)
         reply = reply_prometheus;
@@ -258,19 +246,9 @@ consume:
 void loop() {
     wdt_reset();
 
-    {
-        static unsigned long last_pir_active_time = 0;
-        const auto pir = digitalRead(PIR_PIN) == LOW ? 1 : 0;
-        if (pir) {
-            pir_status = true;
-            last_pir_active_time = millis();
-        } else if (pir_status && (millis() - last_pir_active_time > PIR_HOLD_TIME)) {
-            pir_status = false;
-        }
-    }
-
     check_link();
     handle_dhcp();
+
     bool http_client_handled = handle_http();
 
 #ifdef REBOOT_TIMEOUT

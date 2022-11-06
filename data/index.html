@@ -25,7 +25,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script>
         $(document).ready(function(){
-                $.get("measurements.json", function(data) {
+                $.get("temperature.json", function(data) {
                     $("#spinny").fadeOut();
 
                     row = $("#row");
@@ -33,7 +33,7 @@
                     tab = $("#ondbod");
                     tab.hide();
 
-                    $.each(data["temperature"], function(key, val) {
+                    $.each(data, function(key, val) {
                         nr = row.clone();
 
                         nr.find("#name").text(key);
@@ -42,15 +42,6 @@
 
                         $(nr).show();
                     });
-
-                    nr = row.clone();
-
-                    nr.find("#name").text("presence");
-                    nr.find("#value").text(data["presence"] ? "✔" : "✗");
-
-                    tab.append(nr);
-
-                    $(nr).show();
 
                     tab.fadeIn();
                 });
