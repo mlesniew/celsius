@@ -8,6 +8,6 @@ upload: build
 	touch $@
 
 src/html.h: data/index.html
-	echo "#define INDEX_HTML F(\"$$(minify $< | sed 's#"#\\"#g')\")" > $@
+	echo "#define INDEX_HTML F(\"$$(minify $< | sed 's#"#\\"#g' | tr '\n' ' ')\")" > $@
 
 .PHONY: build upload
