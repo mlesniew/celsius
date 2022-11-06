@@ -6,6 +6,7 @@
 #include "sensor.h"
 
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
+#define MIN_READ_INTERVAL (60 * 1000l)
 
 #define SERVER_NAME "Celsius"
 #define BUFFER_SIZE 30
@@ -131,16 +132,25 @@ void serve_measurements(
         const T & temperature_separator,
         const T & temperature_footer) {
 
+
     send_headers(client, 200, content_type);
 
     // temperature sensors
     send_data(client, temperature_header);
 
-    for (unsigned int i = 0; i < sensor_count; ++i) {
-        sensor[i].request_temperature();
-    }
+#ifdef MIN_READ_INTERVAL
+    static unsigned long last_refresh = millis() - 2 * MIN_READ_INTERVAL;
+    if (millis() - last_refresh > MIN_READ_INTERVAL) {
+#endif
+        for (unsigned int i = 0; i < sensor_count; ++i) {
+            sensor[i].request_temperature();
+        }
 
-    delay(DS18B20_CONVERSION_DELAY_MS);
+        delay(DS18B20_CONVERSION_DELAY_MS);
+#ifdef MIN_READ_INTERVAL
+        last_refresh = millis();
+    }
+#endif
 
     for (unsigned int i = 0; i < sensor_count; ++i) {
         if (i > 0) {
