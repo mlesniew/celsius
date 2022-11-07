@@ -5,6 +5,8 @@
 #include "html.h"
 #include "sensor.h"
 
+// #define DEBUG_REQUESTS
+
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
 #define MIN_READ_INTERVAL (60 * 1000l)
 
@@ -51,7 +53,7 @@ const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 EthernetServer server(80);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println(F(SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
 
   setup_ethernet(mac);
@@ -79,7 +81,9 @@ size_t read_until(EthernetClient & client, const char terminator) {
             continue;
         }
 
+#ifdef DEBUG_REQUESTS
         Serial.write(c);
+#endif
 
         if (c == terminator) {
             // terminator found
@@ -98,7 +102,9 @@ size_t read_until(EthernetClient & client, const char terminator) {
 
 template <typename T>
 void send_data(EthernetClient & client, const T & data) {
+#ifdef DEBUG_REQUESTS
     Serial.print(data);
+#endif
     client.print(data);
 }
 
@@ -133,7 +139,6 @@ void serve_measurements(
         const T & temperature_footer,
         const T & nan) {
 
-
     send_headers(client, 200, content_type);
 
     // temperature sensors
@@ -150,6 +155,8 @@ void serve_measurements(
         delay(DS18B20_CONVERSION_DELAY_MS);
 #ifdef MIN_READ_INTERVAL
         last_refresh = millis();
+    } else {
+        Serial.println(F("Skipping conversion..."));
     }
 #endif
 
