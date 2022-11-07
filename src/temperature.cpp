@@ -130,7 +130,8 @@ void serve_measurements(
         const T & temperature_name_start,
         const T & temperature_name_end,
         const T & temperature_separator,
-        const T & temperature_footer) {
+        const T & temperature_footer,
+        const T & nan) {
 
 
     send_headers(client, 200, content_type);
@@ -164,7 +165,10 @@ void serve_measurements(
             send_data(client, name);
         }
         send_data(client, temperature_name_end);
-        send_data(client, t);
+        if (!isnan(t))
+            send_data(client, t);
+        else
+            send_data(client, nan);
     }
     send_data(client, temperature_footer);
 }
@@ -177,7 +181,8 @@ void serve_measurements_prometheus(EthernetClient & client) {
         F("air_temperature{name=\""),
         F("\"} "),
         F("\n"),
-        F("\n"));
+        F("\n"),
+        F("NaN"));
 }
 
 void serve_measurements_json(EthernetClient & client) {
@@ -188,7 +193,8 @@ void serve_measurements_json(EthernetClient & client) {
         F("\""),
         F("\":"),
         F(","),
-        F("}"));
+        F("}"),
+        F("null"));
 }
 
 bool handle_http() {
