@@ -4,6 +4,6 @@
 [submodule "lib/OneWire"]
 	path = lib/OneWire
 	url = https://github.com/PaulStoffregen/OneWire.git
-[submodule "lib/UIPEthernet"]
-	path = lib/UIPEthernet
-	url = https://github.com/UIPEthernet/UIPEthernet.git
+[submodule "lib/EthernetENC"]
+	path = lib/EthernetENC
+	url = git@github.com:mlesniew/EthernetENC.git
