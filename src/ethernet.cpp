@@ -1,4 +1,4 @@
-#include <UIPEthernet.h>
+#include <EthernetENC.h>
 
 static void (*reset)(void) = 0;
 

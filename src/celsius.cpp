@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <avr/wdt.h>
-#include <UIPEthernet.h>
+#include <EthernetENC.h>
 
 #include "html.h"
 #include "sensor.h"
