@@ -7,10 +7,12 @@
 
 // #define DEBUG_REQUESTS
 
-#define READING_UPDATE_INTERVAL (60 * 1000l)
-
-#define SERVER_NAME "Celsius"
+#define SERVER_NAME "celsius"
 #define BUFFER_SIZE 30
+
+#define READING_UPDATE_INTERVAL (60 * 1000l)
+#define READING_PUBLISH_INTERVAL (15 * 1000l)
+#define PICOMQ_TOPIC_PREFIX "calor/" SERVER_NAME "/"
 
 char buffer[BUFFER_SIZE];
 
@@ -234,11 +236,31 @@ consume:
 }
 
 void loop() {
+    wdt_reset();
+
     if (millis() - last_reading_update >= READING_UPDATE_INTERVAL) {
         request_temperatures();
     }
 
-    wdt_reset();
+#ifdef READING_PUBLISH_INTERVAL
+    {
+        static unsigned long last_publish = millis();
+        static EthernetUDP udp;
+        if ((millis() - last_publish >= READING_PUBLISH_INTERVAL)
+                && (millis() - last_reading_update >= DS18B20_CONVERSION_DELAY_MS)) {
+            for (unsigned int i = 0; i < sensor_count; ++i) {
+                udp.beginPacket(IPAddress(224, 0, 1, 80), 1880);
+                udp.write((uint8_t) 80);
+                udp.print(F(PICOMQ_TOPIC_PREFIX));
+                udp.print((const __FlashStringHelper *) sensor_names[i]);
+                udp.write((uint8_t) 0);
+                udp.print(sensor[i].read());
+                udp.endPacket();
+            }
+            last_publish = millis();
+        }
+    }
+#endif
 
     check_link();
     handle_dhcp();
