@@ -8,7 +8,7 @@
 // #define DEBUG_REQUESTS
 
 #define REBOOT_TIMEOUT (15 * 60 * 1000l)
-#define MIN_READ_INTERVAL (60 * 1000l)
+#define READING_UPDATE_INTERVAL (60 * 1000l)
 
 #define SERVER_NAME "Celsius"
 #define BUFFER_SIZE 30
@@ -51,6 +51,15 @@ constexpr unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 
 EthernetServer server(80);
+unsigned long last_reading_update;
+
+void request_temperatures() {
+    Serial.println(F("Updating readings..."));
+    for (unsigned int i = 0; i < sensor_count; ++i) {
+        sensor[i].request_temperature();
+    }
+    last_reading_update = millis();
+}
 
 void setup() {
     Serial.begin(115200);
@@ -58,6 +67,9 @@ void setup() {
 
     setup_ethernet(mac);
     server.begin();
+
+    request_temperatures();
+
     wdt_enable(WDTO_8S);
 }
 
@@ -134,22 +146,15 @@ void serve_measurements_json(EthernetClient & client) {
     // temperature sensors
     send_data(client, F("{"));
 
-#ifdef MIN_READ_INTERVAL
-    static unsigned long last_refresh = millis() - 2 * MIN_READ_INTERVAL;
-    if (millis() - last_refresh > MIN_READ_INTERVAL) {
-#endif
-        for (unsigned int i = 0; i < sensor_count; ++i) {
-            sensor[i].request_temperature();
+    // ensure readings are already available
+    {
+        const auto elapsed = millis() - last_reading_update;
+        if (elapsed < DS18B20_CONVERSION_DELAY_MS) {
+            delay(DS18B20_CONVERSION_DELAY_MS - elapsed);
         }
-
-        delay(DS18B20_CONVERSION_DELAY_MS);
-#ifdef MIN_READ_INTERVAL
-        last_refresh = millis();
-    } else {
-        Serial.println(F("Skipping conversion..."));
     }
-#endif
 
+    // serve response
     for (unsigned int i = 0; i < sensor_count; ++i) {
         if (i > 0) {
             send_data(client, F(","));
@@ -230,6 +235,10 @@ consume:
 }
 
 void loop() {
+    if (millis() - last_reading_update >= READING_UPDATE_INTERVAL) {
+        request_temperatures();
+    }
+
     wdt_reset();
 
     check_link();
