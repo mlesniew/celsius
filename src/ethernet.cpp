@@ -8,8 +8,7 @@ static void print_ip() {
 }
 
 void check_link() {
-    if (Ethernet.linkStatus() != LinkON)
-    {
+    if (Ethernet.linkStatus() != LinkON) {
         Serial.println(F("Connection lost."));
         reset();
     }
@@ -46,12 +45,12 @@ void handle_dhcp() {
 }
 
 void setup_ethernet(const byte mac[]) {
-  Serial.println(F("Setting up IP with DHCP..."));
-  if (Ethernet.begin(mac) == 0) {
-      Serial.println(F("DHCP failed, reset in 10 seconds..."));
-      delay(10 * 1000);
-      reset();
-  }
+    Serial.println(F("Setting up IP with DHCP..."));
+    if (Ethernet.begin(mac) == 0) {
+        Serial.println(F("DHCP failed, reset in 10 seconds..."));
+        delay(10 * 1000);
+        reset();
+    }
 
-  print_ip();
+    print_ip();
 }

@@ -53,12 +53,12 @@ const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 EthernetServer server(80);
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println(F(SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
+    Serial.begin(115200);
+    Serial.println(F(SERVER_NAME " " __DATE__ " " __TIME__ "\n"));
 
-  setup_ethernet(mac);
-  server.begin();
-  wdt_enable(WDTO_8S);
+    setup_ethernet(mac);
+    server.begin();
+    wdt_enable(WDTO_8S);
 }
 
 size_t read_until(EthernetClient & client, const char terminator) {
@@ -128,21 +128,11 @@ void serve_html(EthernetClient & client) {
     send_data(client, INDEX_HTML);
 }
 
-template <typename T>
-void serve_measurements(
-        EthernetClient & client,
-        const T & content_type,
-        const T & temperature_header,
-        const T & temperature_name_start,
-        const T & temperature_name_end,
-        const T & temperature_separator,
-        const T & temperature_footer,
-        const T & nan) {
-
-    send_headers(client, 200, content_type);
+void serve_measurements_json(EthernetClient & client) {
+    send_headers(client, 200, F("application/json"));
 
     // temperature sensors
-    send_data(client, temperature_header);
+    send_data(client, F("{"));
 
 #ifdef MIN_READ_INTERVAL
     static unsigned long last_refresh = millis() - 2 * MIN_READ_INTERVAL;
@@ -162,73 +152,49 @@ void serve_measurements(
 
     for (unsigned int i = 0; i < sensor_count; ++i) {
         if (i > 0) {
-            send_data(client, temperature_separator);
+            send_data(client, F(","));
         }
         const double t = sensor[i].read();
-        send_data(client, temperature_name_start);
+        send_data(client, F("\""));
         {
             char name[16];
-            strncpy_P(name, (const char*) pgm_read_dword(&(sensor_names[i])), 16);
+            strncpy_P(name, (const char *) pgm_read_dword(&(sensor_names[i])), 16);
             send_data(client, name);
         }
-        send_data(client, temperature_name_end);
-        if (!isnan(t))
+        send_data(client, "\":");
+        if (!isnan(t)) {
             send_data(client, t);
-        else
-            send_data(client, nan);
+        } else {
+            send_data(client, F("null"));
+        }
     }
-    send_data(client, temperature_footer);
-}
-
-void serve_measurements_prometheus(EthernetClient & client) {
-    serve_measurements(
-        client,
-        F("text/plain"),
-        F("\n# HELP temperature Temperature in degrees Celsius\n# TYPE temperature gauge\n"),
-        F("air_temperature{name=\""),
-        F("\"} "),
-        F("\n"),
-        F("\n"),
-        F("NaN"));
-}
-
-void serve_measurements_json(EthernetClient & client) {
-    serve_measurements(
-        client,
-        F("application/json"),
-        F("{"),
-        F("\""),
-        F("\":"),
-        F(","),
-        F("}"),
-        F("null"));
+    send_data(client, F("}"));
 }
 
 bool handle_http() {
-    enum {reply_index, reply_json, reply_prometheus, reply_error} reply = reply_error;
+    enum {reply_index, reply_json, reply_error} reply = reply_error;
 
     EthernetClient client = server.available();
-    if (!client)
+    if (!client) {
         return false;
+    }
 
     uint16_t code = 200;
 
     // read the HTTP verb
     read_until(client, ' ');
-    if (strncmp_P(buffer, (const char*) F("GET"), BUFFER_SIZE) != 0) {
+    if (strncmp_P(buffer, (const char *) F("GET"), BUFFER_SIZE) != 0) {
         code = 400;
         goto consume;
     }
 
     // read uri
     read_until(client, ' ');
-    if (strncmp_P(buffer, (const char*) F("/temperature.json"), BUFFER_SIZE) == 0)
+    if (strncmp_P(buffer, (const char *) F("/temperature.json"), BUFFER_SIZE) == 0) {
         reply = reply_json;
-    else if (strncmp_P(buffer, (const char*) F("/metrics"), BUFFER_SIZE) == 0)
-        reply = reply_prometheus;
-    else if (strncmp_P(buffer, (const char*) F("/"), BUFFER_SIZE) == 0)
+    } else if (strncmp_P(buffer, (const char *) F("/"), BUFFER_SIZE) == 0) {
         reply = reply_index;
-    else {
+    } else {
         code = 404;
         reply = reply_error;
     }
@@ -246,9 +212,6 @@ consume:
             break;
         case reply_json:
             serve_measurements_json(client);
-            break;
-        case reply_prometheus:
-            serve_measurements_prometheus(client);
             break;
         default:
             send_headers(client, code);
@@ -275,7 +238,7 @@ void loop() {
     bool http_client_handled = handle_http();
 
 #ifdef REBOOT_TIMEOUT
-    #warning The Arduino will reset automatically if no requests are received for REBOOT_TIMEOUT milliseconds
+#warning The Arduino will reset automatically if no requests are received for REBOOT_TIMEOUT milliseconds
     {
         static constexpr unsigned long reboot_timeout = REBOOT_TIMEOUT;
         static unsigned long last_http_client = millis();
