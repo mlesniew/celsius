@@ -11,8 +11,9 @@
 #define BUFFER_SIZE 30
 
 #define READING_UPDATE_INTERVAL (60 * 1000l)
-#define READING_PUBLISH_INTERVAL (15 * 1000l)
-#define PICOMQ_TOPIC_PREFIX "calor/" SERVER_NAME "/"
+#define READING_PUBLISH_INTERVAL (3 * 1000l)
+#define PICOMQ_TOPIC_PREFIX "celsius/" SERVER_NAME "/"
+#define PICOMQ_TOPIC_SUFFIX "/temperature"
 
 char buffer[BUFFER_SIZE];
 
@@ -52,6 +53,7 @@ constexpr unsigned int sensor_count = sizeof(sensor) / sizeof(sensor[0]);
 const byte mac[] = { 0x82, 0xc3, 0x34, 0x53, 0xe9, 0xd1 };
 
 EthernetServer server(80);
+EthernetUDP udp;
 unsigned long last_reading_update;
 
 void request_temperatures() {
@@ -68,6 +70,7 @@ void setup() {
 
     setup_ethernet(mac);
     server.begin();
+    udp.begin(1880);
 
     request_temperatures();
 
@@ -162,11 +165,7 @@ void serve_measurements_json(EthernetClient & client) {
         }
         const double t = sensor[i].read();
         send_data(client, F("\""));
-        {
-            char name[16];
-            strncpy_P(name, (const char *) pgm_read_dword(&(sensor_names[i])), 16);
-            send_data(client, name);
-        }
+        send_data(client, (const __FlashStringHelper *) pgm_read_dword(&(sensor_names[i])));
         send_data(client, "\":");
         if (!isnan(t)) {
             send_data(client, t);
@@ -245,14 +244,15 @@ void loop() {
 #ifdef READING_PUBLISH_INTERVAL
     {
         static unsigned long last_publish = millis();
-        static EthernetUDP udp;
         if ((millis() - last_publish >= READING_PUBLISH_INTERVAL)
                 && (millis() - last_reading_update >= DS18B20_CONVERSION_DELAY_MS)) {
+            Serial.println(F("PicoMQ publish"));
             for (unsigned int i = 0; i < sensor_count; ++i) {
                 udp.beginPacket(IPAddress(224, 0, 1, 80), 1880);
                 udp.write((uint8_t) 80);
                 udp.print(F(PICOMQ_TOPIC_PREFIX));
-                udp.print((const __FlashStringHelper *) sensor_names[i]);
+                udp.print((const __FlashStringHelper *) pgm_read_dword(&(sensor_names[i])));
+                udp.print(F(PICOMQ_TOPIC_SUFFIX));
                 udp.write((uint8_t) 0);
                 udp.print(sensor[i].read());
                 udp.endPacket();
