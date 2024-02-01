@@ -7,7 +7,6 @@
 
 // #define DEBUG_REQUESTS
 
-#define REBOOT_TIMEOUT (15 * 60 * 1000l)
 #define READING_UPDATE_INTERVAL (60 * 1000l)
 
 #define SERVER_NAME "Celsius"
