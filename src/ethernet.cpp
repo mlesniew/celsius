@@ -3,13 +3,13 @@
 static void (*reset)(void) = 0;
 
 static void print_ip() {
-    Serial.print(F("IP address: "));
+    Serial.print(F("IP: "));
     Serial.println(Ethernet.localIP());
 }
 
 void check_link() {
     if (Ethernet.linkStatus() != LinkON) {
-        Serial.println(F("Connection lost."));
+        Serial.println(F("Conn lost"));
         reset();
     }
 }
@@ -18,7 +18,7 @@ void handle_dhcp() {
     switch (Ethernet.maintain()) {
         case 1:
             //renewed fail
-            Serial.println(F("Error: renewed fail"));
+            Serial.println(F("Renew fail"));
             reset();
             break;
 
@@ -29,7 +29,7 @@ void handle_dhcp() {
 
         case 3:
             //rebind fail
-            Serial.println(F("Error: rebind fail"));
+            Serial.println(F("Rebind fail"));
             reset();
             break;
 
@@ -45,9 +45,9 @@ void handle_dhcp() {
 }
 
 void setup_ethernet(const byte mac[]) {
-    Serial.println(F("Setting up IP with DHCP..."));
+    Serial.println(F("DHCP..."));
     if (Ethernet.begin(mac) == 0) {
-        Serial.println(F("DHCP failed, reset in 10 seconds..."));
+        Serial.println(F("Fail"));
         delay(10 * 1000);
         reset();
     }

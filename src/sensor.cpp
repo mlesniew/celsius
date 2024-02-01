@@ -5,11 +5,11 @@ Sensor::Sensor(uint8_t pin) : one_wire(pin), sensors(&one_wire), connected(false
 bool Sensor::connect() {
     sensors.begin();
 
-    Serial.print(F("Scanning... "));
+    Serial.print(F("Scan..."));
     DeviceAddress address;
 
     if (!sensors.getDeviceCount() || !sensors.getAddress(address, 0)) {
-        Serial.println(F("no device"));
+        Serial.println(F("no dev"));
         return false;
     }
 
@@ -19,14 +19,14 @@ bool Sensor::connect() {
     }
 
     if (!sensors.validFamily(address)) {
-        Serial.println(F(" unsupported device"));
+        Serial.println(F("unsupported"));
         return false;
     }
 
     if (sensors.getResolution(address) != DS18B20_RESOLUTION) {
-        Serial.print(F(" configuring"));
+        Serial.print(F("config"));
         if (!sensors.setResolution(address, DS18B20_RESOLUTION)) {
-            Serial.println(F(" error "));
+            Serial.println(F(" fail"));
             return false;
         }
     }
