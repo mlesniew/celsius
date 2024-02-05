@@ -244,19 +244,20 @@ void loop() {
 #ifdef READING_PUBLISH_INTERVAL
     {
         static unsigned long last_publish = millis();
-        if ((millis() - last_publish >= READING_PUBLISH_INTERVAL)
+        if ((millis() - last_publish >= READING_PUBLISH_INTERVAL / sensor_count)
                 && (millis() - last_reading_update >= DS18B20_CONVERSION_DELAY_MS)) {
-            Serial.println(F("PicoMQ publish"));
-            for (unsigned int i = 0; i < sensor_count; ++i) {
-                udp.beginPacket(IPAddress(224, 0, 1, 80), 1880);
-                udp.write((uint8_t) 80);
-                udp.print(F(PICOMQ_TOPIC_PREFIX));
-                udp.print((const __FlashStringHelper *) pgm_read_dword(&(sensor_names[i])));
-                udp.print(F(PICOMQ_TOPIC_SUFFIX));
-                udp.write((uint8_t) 0);
-                udp.print(sensor[i].read());
-                udp.endPacket();
-            }
+            static unsigned int idx = 0;
+
+            udp.beginPacket(IPAddress(224, 0, 1, 80), 1880);
+            udp.write((uint8_t) 80);
+            udp.print(F(PICOMQ_TOPIC_PREFIX));
+            udp.print((const __FlashStringHelper *) pgm_read_dword(&(sensor_names[idx])));
+            udp.print(F(PICOMQ_TOPIC_SUFFIX));
+            udp.write((uint8_t) 0);
+            udp.print(sensor[idx].read());
+            udp.endPacket();
+
+            idx = (idx + 1) % sensor_count;
             last_publish = millis();
         }
     }
