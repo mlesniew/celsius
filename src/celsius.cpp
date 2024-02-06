@@ -70,7 +70,6 @@ void setup() {
 
     setup_ethernet(mac);
     server.begin();
-    udp.begin(1880);
 
     request_temperatures();
 
